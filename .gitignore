@@ -1,0 +1,32 @@
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# OS generated files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# Project temporary files
+.warfront_log
+.warfront_done
+.warfront_attempt
+.vimrc_warfront
+
+# User data
+.warfront_progress.json
+.warfront_mode
+saves/*
+!saves/.gitkeep
+
+# Other artifacts
+warfront.zip
+warfront.tar.gz
+*.swp
+*.swo
+dev_docs/

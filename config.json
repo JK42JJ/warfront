@@ -1,0 +1,11 @@
+{
+    "animation": {
+        "move_speed": 0.2,
+        "data_speed": 0.4,
+        "ui_refresh_rate": 0.3
+    },
+    "ui": {
+        "map_expand": true,
+        "show_legend": true
+    }
+}

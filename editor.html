@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>WARFRONT | WEB TACTICAL EDITOR</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.36.1/min/vs/loader.min.js"></script>
+    <style>
+        :root {
+            --bg-color: #0d1117;
+            --panel-bg: #161b22;
+            --border-color: #30363d;
+            --text-color: #c9d1d9;
+            --accent-color: #58a6ff;
+            --success-color: #238636;
+            --error-color: #da3633;
+        }
+        body, html { margin: 0; padding: 0; height: 100%; background: var(--bg-color); color: var(--text-color); font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif; overflow: hidden; }
+        .layout { display: flex; flex-direction: column; height: 100vh; }
+        
+        /* Header */
+        header { height: 50px; border-bottom: 1px solid var(--border-color); display: flex; align-items: center; justify-content: space-between; padding: 0 20px; background: var(--panel-bg); }
+        .logo { color: #f85149; font-weight: bold; font-size: 1.2rem; letter-spacing: 1px; }
+        .mission-info { font-size: 0.9rem; }
+        .controls { display: flex; gap: 10px; }
+        
+        /* Main Body */
+        .main { flex: 1; display: flex; overflow: hidden; }
+        #editor-container { flex: 1; border-right: 1px solid var(--border-color); }
+        
+        /* Sidebar (Output) */
+        .sidebar { width: 400px; display: flex; flex-direction: column; background: var(--bg-color); }
+        .panel-header { padding: 10px 15px; background: var(--panel-bg); border-bottom: 1px solid var(--border-color); font-size: 0.85rem; font-weight: bold; color: var(--accent-color); }
+        #output-content { flex: 1; padding: 15px; font-family: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace; font-size: 0.85rem; overflow-y: auto; white-space: pre-wrap; line-height: 1.5; }
+        
+        /* Status Bar */
+        footer { height: 30px; border-top: 1px solid var(--border-color); background: var(--panel-bg); display: flex; align-items: center; padding: 0 15px; font-size: 0.75rem; color: #8b949e; justify-content: space-between; }
+        
+        button { background: var(--success-color); color: white; border: none; padding: 6px 15px; border-radius: 4px; font-weight: bold; cursor: pointer; font-size: 0.85rem; }
+        button:hover { opacity: 0.9; }
+        button.secondary { background: var(--border-color); color: var(--text-color); }
+        
+        .success { color: #3fb950; font-weight: bold; }
+        .error { color: #f85149; }
+        .key-val { display: flex; justify-content: space-between; border-bottom: 1px solid #21262d; padding: 4px 0; }
+        .key { color: #8b949e; }
+        
+        /* Finish Banner */
+        #finish-banner { display: none; position: fixed; top: 0; left: 0; right: 0; background: var(--success-color); color: white; text-align: center; padding: 15px; z-index: 1000; font-size: 1.1rem; }
+    </style>
+</head>
+<body>
+
+<div id="finish-banner">
+    <b>✔ Mission Accomplished!</b><br><small>Automatically returning to menu.</small>
+</div>
+
+<div class="layout">
+    <header>
+        <div class="logo">⚔ WARFRONT</div>
+        <div class="mission-info" id="txt-title">Loading mission...</div>
+        <div class="controls">
+            <button class="secondary" onclick="resetCode()">Reset</button>
+            <button onclick="runCode()">RUN (Ctrl+S)</button>
+            <button class="secondary" style="background:#30363d" onclick="goMenu()">Menu</button>
+        </div>
+    </header>
+
+    <div class="main">
+        <div id="editor-container"></div>
+        <div class="sidebar">
+            <div class="panel-header">📡  Operation Results</div>
+            <div id="output-content">
+                <div style="color:#8b949e; text-align:center; margin-top:50px;">
+                    Write your code and press RUN.<br>(Auto-runs on save)
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <footer>
+        <div><span id="txt-file">solution.py</span> | Mode: Web (Jupyter-like)</div>
+        <div>Ctrl+S: Save & Run | Ctrl+B 0: Return to Menu</div>
+    </footer>
+</div>
+
+<script>
+    let editor;
+    let missionNo = "01";
+
+    require.config({ paths: { 'vs': 'https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.36.1/min/vs' }});
+    require(['vs/editor/editor.main'], function() {
+        // Load initial state from server
+        fetch('/api/status').then(r => r.json()).then(data => {
+            missionNo = data.mission;
+            document.getElementById('txt-title').innerText = data.title || "Running mission";
+            document.getElementById('txt-file').innerText = data.filename || "solution.py";
+
+            editor = monaco.editor.create(document.getElementById('editor-container'), {
+                value: data.code || "",
+                language: 'python',
+                theme: 'vs-dark',
+                automaticLayout: true,
+                fontSize: 14,
+                minimap: { enabled: false },
+                scrollBeyondLastLine: false,
+                padding: { top: 10 }
+            });
+
+            // Keyboard shortcut
+            window.addEventListener('keydown', e => {
+                if ((e.ctrlKey || e.metaKey) && e.key === 's') {
+                    e.preventDefault();
+                    runCode();
+                }
+            });
+        });
+    });
+
+    function runCode() {
+        const code = editor.getValue();
+        const outContent = document.getElementById('output-content');
+        outContent.innerHTML = "<div style='color:var(--accent-color)'>Running...</div>";
+
+        fetch('/api/run', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({ code: code })
+        })
+        .then(r => r.json())
+        .then(data => {
+            if (data.success) {
+                renderOutput(data.output);
+                if (data.done) {
+                    const banner = document.getElementById('finish-banner');
+                    banner.style.display = 'block';
+                    setTimeout(() => { goMenu(); }, 2000);
+                }
+            } else {
+                outContent.innerHTML = `<div class="error">${data.output}</div>`;
+            }
+        })
+        .catch(e => {
+            outContent.innerHTML = `<div class="error">Network error: ${e}</div>`;
+        });
+    }
+
+    function renderOutput(out) {
+        const outContent = document.getElementById('output-content');
+        let html = "";
+        if (Array.isArray(out)) {
+            out.forEach(pair => {
+                html += `<div class="key-val"><span class="key">${pair[0]}</span><span class="val">${pair[1]}</span></div>`;
+            });
+        } else {
+            html = out;
+        }
+        outContent.innerHTML = html;
+    }
+
+    function resetCode() {
+        if (!confirm("Reset code?")) return;
+        fetch('/api/status').then(r => r.json()).then(data => {
+            editor.setValue(data.original_code);
+        });
+    }
+
+    function goMenu() {
+        fetch('/api/menu', { method: 'POST' }).then(() => {
+            document.body.innerHTML = "<div style='display:flex; height:100vh; align-items:center; justify-content:center; flex-direction:column; text-align:center;'>" +
+                                     "<h2 style='color:var(--success-color)'>✔ Completed</h2>" +
+                                     "<p>Focus has moved to the terminal menu window.</p>" +
+                                     "<button onclick='location.reload()'>Keep Coding</button></div>";
+        });
+    }
+</script>
+</body>
+</html>
