@@ -61,6 +61,34 @@ Windows users are recommended to use **WSL (Windows Subsystem for Linux)** for t
 
 ## 📐 Development Conventions
 
+### ⚠️ Core Design Contract — Must Read Before Modifying Any Engine File
+
+**Visualization Contract** (the most critical rule):
+
+> `visualize_result(gmap, result)` must **only** visualize the user's `solve()` return value.
+> **Never** call a reference algorithm (`bfs_sim`, `dijkstra_sim`, etc.) inside `visualize_result`.
+
+Why this matters: if a reference algorithm runs inside `visualize_result`, users see a correct path animation even when their code is incomplete or wrong — making them falsely believe their implementation works. This destroys the educational value of the tool.
+
+```python
+# ❌ WRONG — reference algorithm ignores user's result (causes "false success" bug)
+def visualize_result(gmap, result):
+    return bfs_sim(gmap, start, goal)   # always shows the correct path
+
+# ✅ CORRECT — only visualize what the user's code returned
+def visualize_result(gmap, result):
+    if not result:
+        return None          # incomplete → no animation, shows "Incomplete" status
+    # animate result (list of (r,c) cells) step by step
+```
+
+**Completion Contract**:
+
+> `watcher.py` only signals mission complete when the file's `mtime` has changed since watcher startup.
+> The initial auto-trigger on watcher start never counts as a completion.
+
+This prevents pre-existing saves files (with working code from a previous session) from auto-completing a mission when the user opens the code window.
+
 ### Step Snapshot System
 All algorithms in `core.py` must return a list of snapshots to be rendered sequentially.
 - Format: `List[Tuple[State, Description, ExtraInfo]]`

@@ -149,6 +149,12 @@ def main(solution_path: str, mission_no: str, already_done: bool) -> None:
     is_first_run = True
     last_result = None
 
+    # Record mtime at startup — only mark complete if user saves AFTER watcher started
+    try:
+        startup_mtime = os.path.getmtime(solution_path)
+    except OSError:
+        startup_mtime = 0.0
+
     console.clear()
 
     with Live(None, console=console, vertical_overflow="crop", refresh_per_second=10) as live:
@@ -217,11 +223,15 @@ def main(solution_path: str, mission_no: str, already_done: bool) -> None:
 
             live.update(_build_view(current_gmap, changed_path, result, complexity, attempts))
 
-            # Signal success
+            # Signal success only if user genuinely saved the file (mtime changed since startup)
             is_empty = not result.result or (
                 isinstance(result.result, dict) and not any(result.result.values())
             )
-            if not is_empty and not is_first_run and not already_done:
+            try:
+                user_saved = os.path.getmtime(changed_path) > startup_mtime
+            except OSError:
+                user_saved = False
+            if not is_empty and user_saved and not already_done:
                 mark_complete(problem_file)
                 _signal_done()
 

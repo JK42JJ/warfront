@@ -96,7 +96,10 @@ class SolutionWatcher:
 
     def _poll_loop(self) -> None:
         import time
-        last_mtime = 0.0
+        try:
+            last_mtime = os.path.getmtime(self._path)
+        except OSError:
+            last_mtime = 0.0
         while not self._stop_event.is_set():
             try:
                 mtime = os.path.getmtime(self._path)

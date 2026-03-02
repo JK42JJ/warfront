@@ -26,17 +26,29 @@ def get_test_data():
     return {}
 
 def visualize_result(gmap, result):
-    from core import snapshot, dijkstra_sim
+    """Animate the user's solve() result on the map.
 
-    start = goal = None
-    for r in range(gmap.rows):
-        for c in range(gmap.cols):
-            u = gmap.grid[r][c].unit
-            if u and u.name == "ALLY":   start = (r, c)
-            if u and u.name == "TARGET": goal  = (r, c)
+    DESIGN CONTRACT: visualize ONLY what the user's solve() returned.
+    Never call dijkstra_sim() or any reference algorithm here — that would
+    display a correct path animation even when the user's code is wrong.
+    """
+    from core import snapshot
 
-    if not (start and goal):
-        return [(snapshot(gmap), "❌ Map error", "No start/goal found")]
+    if not result:
+        return None
 
     gmap.reset_simulation_state()
-    return dijkstra_sim(gmap, start, goal)
+    steps = []
+    total = len(result)
+
+    for i, (r, c) in enumerate(result):
+        gmap.grid[r][c].in_path = True
+        gmap.grid[r][c].visited = True
+        label = "🎯 Target Reached!" if i == total - 1 else f"→ ({r},{c})"
+        steps.append((
+            snapshot(gmap),
+            f"{label}  [{i + 1}/{total}]",
+            f"Min-cost path: {total} steps",
+        ))
+
+    return steps or None
