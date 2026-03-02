@@ -3,37 +3,49 @@
 # DESC: Classify combat situations using if/elif/else and issue commands
 # ALGO: Condition
 # MODULE: mission_00_trainee
+# TIME_COMPLEXITY: O(1)
+# SPACE_COMPLEXITY: O(1)
+# DIFFICULTY: 1
+"""
+┌─ CONDITIONALS ──────────────────────────────────────────────────────────────┐
+│  1. if / elif / else — branching logic based on conditions                  │
+│  2. Compound conditions: (hp < 30) or (enemies > 5)                         │
+│  3. Order matters: check the most specific condition first                  │
+└─────────────────────────────────────────────────────────────────────────────┘
+"""
 
-def solve(data):
-    """
-    data = {
-      'hp':      Current HP (0~100),
-      'ammo':    Ammo Count (0~100),
-      'enemies': Nearby   Count
-    }
-    Return: {
-      'status':  'danger' / 'caution' / 'safe'
-                 (hp<30 or enemies>5 → danger,
-                  hp<60 or ammo<20  → caution,
-                  otherwise                 → safe),
-      'command': 'retreat' / 'hold' / 'attack'
-                 (danger→retreat, caution→hold, safe→attack),
-      'ammo_ok': ammo  10  If True
-    }
-    """
+# ── Data Reference ────────────────────────────────────────────────────────────
+# data['hp']      : int — current HP 0–100
+# data['ammo']    : int — ammo count 0–100
+# data['enemies'] : int — nearby enemy count
+# ─────────────────────────────────────────────────────────────────────────────
+
+def solve(data: dict) -> dict:
+    """Assess the battlefield situation and issue the correct command."""
     hp      = data['hp']
     ammo    = data['ammo']
     enemies = data['enemies']
 
-    # TODO 1: if/elif/else with status Decision
+    # TODO 1: determine status using if/elif/else
+    #   'danger'  if hp < 30 OR enemies > 5
+    #   'caution' if hp < 60 OR ammo < 20
+    #   'safe'    otherwise
     status = ""
 
-    # TODO 2: status to   command Decision
+    # TODO 2: determine command from status
+    #   danger  → 'retreat'
+    #   caution → 'hold'
+    #   safe    → 'attack'
     command = ""
 
-    # TODO 3: ammo >= 10 If True
+    # TODO 3: ammo_ok = True if ammo >= 10
     ammo_ok = False
 
     return {'status': status, 'command': command, 'ammo_ok': ammo_ok}
 
-# --- Execution Block ---
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Expected output:
+#   {'status': 'safe', 'command': 'attack', 'ammo_ok': True}  ← hp=80,ammo=50,enemies=2
+#   {'status': 'danger', 'command': 'retreat', 'ammo_ok': False}  ← hp=20,ammo=5,enemies=1
+# ─────────────────────────────────────────────────────────────────────────────

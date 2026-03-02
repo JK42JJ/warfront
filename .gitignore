@@ -20,9 +20,13 @@ Thumbs.db
 
 # User data
 .warfront_progress.json
+.warfront_progress.db
 .warfront_mode
 saves/*
 !saves/.gitkeep
+
+# Claude Code session files
+.claude/
 
 # Other artifacts
 warfront.zip

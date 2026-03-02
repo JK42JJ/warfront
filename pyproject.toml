@@ -1,0 +1,38 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.backends.legacy:build"
+
+[project]
+name = "warfront"
+version = "2.0.0"
+description = "WARFRONT — Algorithm Tactical Simulator"
+requires-python = ">=3.9"
+dependencies = [
+    "rich>=13",
+    "watchdog>=3",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8",
+    "pytest-cov",
+    "ruff",
+    "mypy",
+]
+
+[project.scripts]
+warfront        = "warfront.cli.menu:run"
+warfront-import = "warfront.importer.cli:main"
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["warfront*"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py39"
+
+[tool.mypy]
+python_version = "3.9"
+strict = false
+ignore_missing_imports = true
