@@ -1,4 +1,7 @@
-"""warfront/cli/status_panel.py — Rich Panel showing execution status."""
+"""warfront/cli/status_panel.py — Rich Panel showing execution status.
+
+Retro phosphor-green HUD aesthetic — like a classic DEFCON terminal readout.
+"""
 from __future__ import annotations
 
 from typing import Optional
@@ -14,21 +17,20 @@ def build_status_panel(
     result: ExecutionResult,
     complexity: Optional[ComplexityEstimate] = None,
     attempts: int = 0,
-    title: str = "Status",
+    title: str = "Mission Status",
 ) -> Panel:
     """Return a Rich Panel summarising an ExecutionResult.
 
-    Layout:
-        ┌─ Status ─────────────────────────────────────────┐
-        │  ✅ Success  |  12.3 ms  |  T: O(n)  S: O(n)   │
-        │  Attempts: 3                                      │
-        └───────────────────────────────────────────────────┘
+    Retro HUD layout:
+        ┌─ ◄ Mission Status ► ──────────────────────────────┐
+        │  ✔ MISSION SUCCESS  │  12.3 ms  │  T: O(n)  S: O(n)  │
+        │  ATTEMPTS: 3  ·  PATH LENGTH: 14 cells              │
+        └────────────────────────────────────────────────────┘
 
-    For errors the last 5 lines of the traceback are shown.
     Border colour:
         green  → success
         red    → error
-        yellow → timeout
+        yellow → timeout / incomplete
     """
     status = result.status  # "success" | "error" | "timeout"
     is_empty = not result.result or (
@@ -38,16 +40,16 @@ def build_status_panel(
     # ── Border / icon ────────────────────────────────────────────────────
     if status == "timeout":
         border = "yellow"
-        status_label = "[bold yellow]⏱ Timeout[/]"
+        status_label = "[bold yellow]⏱  TIMEOUT[/]"
     elif status == "error":
-        border = "bright_red"
-        status_label = "[bold red]✘ Error[/]"
+        border = "red"
+        status_label = "[bold red]✘  MISSION FAILED[/]"
     elif is_empty:
         border = "yellow"
-        status_label = "[yellow]⚠  Incomplete — solve() returns empty[/]"
+        status_label = "[yellow]▸  AWAITING ORDERS — solve() returns empty[/]"
     else:
-        border = "bright_green"
-        status_label = "[bold green]✔ Success[/]"
+        border = "green"
+        status_label = "[bold bright_green]✔  MISSION SUCCESS[/]"
 
     # ── Build text content ────────────────────────────────────────────────
     content = Text()
@@ -56,22 +58,23 @@ def build_status_panel(
     exec_ms = f"{result.duration_ms:.1f} ms"
     content.append("  ")
     content.append_text(Text.from_markup(status_label))
-    content.append(f"  |  {exec_ms}")
+    content.append(f"  │  {exec_ms}", style="dim green")
 
     if complexity is not None:
-        content.append(f"  |  T: {complexity.time}  S: {complexity.space}")
+        content.append(f"  │  T: {complexity.time}  S: {complexity.space}", style="dim green")
 
     content.append("\n")
 
     # Line 2 — attempt counter + path info
+    content.append("  ", style="")
     if isinstance(attempts, tuple):
         atts, completions = attempts
-        content.append(f"  Edits: {atts}  Solved: {completions}", style="dim")
+        content.append(f"EDITS: {atts}  ·  SOLVED: {completions}", style="dim green")
     else:
-        content.append(f"  Attempts: {attempts}", style="dim")
+        content.append(f"ATTEMPTS: {attempts}", style="dim green")
 
     if status == "success" and not is_empty and isinstance(result.result, list) and len(result.result) > 0:
-        content.append(f"  |  Path length: {len(result.result)} cells", style="dim")
+        content.append(f"  ·  PATH LENGTH: {len(result.result)} cells", style="dim green")
 
     content.append("\n")
 
@@ -85,7 +88,7 @@ def build_status_panel(
 
     return Panel(
         content,
-        title=f"[bold]{title}[/]",
+        title=f"[bold green]◄  {title}  ►[/]",
         title_align="left",
         border_style=border,
         padding=(0, 1),
