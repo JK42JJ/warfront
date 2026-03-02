@@ -150,7 +150,8 @@ def _build_paged_ui(
     content.append(Panel(status_group, border_style="bright_black", padding=(0, 1)))
 
     # 3. Table — all columns fixed-width so layout never shifts between pages
-    table = Table(box=box.MINIMAL_HEAVY_HEAD, show_lines=False, expand=False, padding=(0, 1))
+    table = Table(box=box.SIMPLE_HEAD, show_lines=False, expand=False, padding=(0, 1),
+                  header_style="dim")
     table.add_column("",            width=2,  style="dim",      no_wrap=True)  # cursor
     table.add_column("#",           width=4,  style="dim",      no_wrap=True)  # number
     table.add_column("Difficulty",  width=14,                   no_wrap=True)  # stars

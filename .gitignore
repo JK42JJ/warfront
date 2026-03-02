@@ -21,6 +21,8 @@ Thumbs.db
 # User data
 .warfront_progress.json
 .warfront_progress.db
+.warfront_progress.db-shm
+.warfront_progress.db-wal
 .warfront_mode
 saves/*
 !saves/.gitkeep

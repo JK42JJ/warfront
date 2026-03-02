@@ -9,10 +9,12 @@ Replaces v1 (getmtime polling + pickle IPC) with:
   - queue.Queue IPC (no signal file TOCTOU)
   - @dataclass Config (no silent __getattr__ bug)
 """
+import ctypes
 import os
 import queue
 import subprocess
 import sys
+import threading
 import time
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -41,6 +43,51 @@ LOG_FILE     = os.path.join(BASE_DIR, cfg.paths.log_file)
 DONE_SIGNAL  = os.path.join(BASE_DIR, cfg.paths.done_file)
 
 init_db()
+
+_SOLVE_TIMEOUT = 3.0  # seconds before solve() is considered hung
+
+
+# ── Timeout-guarded runner ─────────────────────────────────────────────────
+
+def _run_with_timeout(solution_path: str, data: dict) -> ExecutionResult:
+    """Run solve() in a daemon thread; return timeout result if it hangs.
+
+    The BFS/DFS stubs in problem files may loop forever (e.g. missing
+    visited.add()), which would hang the watcher with a blank screen.
+    Running in a thread lets us bail out after SOLVE_TIMEOUT seconds.
+    """
+    original_stdout = sys.stdout
+    result_holder: list = [None]
+
+    def _worker() -> None:
+        result_holder[0] = run_solution(solution_path, data)
+
+    t = threading.Thread(target=_worker, daemon=True)
+    t.start()
+    t.join(_SOLVE_TIMEOUT)
+
+    if t.is_alive():
+        # Best-effort: inject TimeoutError into the stuck thread
+        if t.ident:
+            try:
+                ctypes.pythonapi.PyThreadState_SetAsyncExc(
+                    ctypes.c_ulong(t.ident),
+                    ctypes.py_object(TimeoutError),
+                )
+            except Exception:
+                pass
+        # Restore stdout if sandbox left it redirected
+        sys.stdout = original_stdout
+        return ExecutionResult(
+            status="timeout",
+            error=f"⏱ Execution exceeded {_SOLVE_TIMEOUT:.0f}s — check for infinite loops",
+        )
+
+    # Thread finished; restore stdout safety net
+    if sys.stdout is not original_stdout:
+        sys.stdout = original_stdout
+
+    return result_holder[0] or ExecutionResult(status="error", error="Unknown error")
 
 
 # ── Helpers ────────────────────────────────────────────────────────────────
@@ -184,8 +231,8 @@ def main(solution_path: str, mission_no: str, already_done: bool) -> None:
             module_name = _read_module_name(changed_path)
             data, mission_mod = _build_data_from_module(module_name)
 
-            # Run solution in-process (with 3s timeout via runner thread)
-            result: ExecutionResult = run_solution(changed_path, data)
+            # Run solution with 3s timeout (guards against infinite loops in stubs)
+            result: ExecutionResult = _run_with_timeout(changed_path, data)
 
             _write_log(changed_path, result, solve_result=result.result)
 
